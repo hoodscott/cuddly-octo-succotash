@@ -7,10 +7,12 @@
 {% endblock %}
 
 {% block body_block %}
+<div class="hero-unit">
     <h1>Rango says...</h1>
     <p>
         This is the <strong>About</strong> page.<br>
         You have visited this page {{ num_visits }} times.
     </p>
     <img src="{% static "half-rango.png" %}" alt="Half of a picture of Rango" />
+</div>
 {% endblock %}

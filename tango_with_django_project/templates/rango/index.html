@@ -2,35 +2,44 @@
 
 {% load static %}
 
-{% block body_block %}
-    {% if user.is_authenticated %}
-        <h1>Rango says... hello {{ user.username }}!</h1>
-    {% else %}
-        <h1>Rango says... hello world!</h1>
-    {% endif %}
+{% block title %}
+    Home
+{% endblock %}
 
-    <h2>Top 5 Categories</h2>
-    {% if categories %}
+{% block body_block %}
+<div class="hero-unit">
+    <h1>Ready to Rango</h1>
+    <p>Find, Add, Share and Rango useful links and resources.</p>
+</div>
+
+<div class="row-fluid">
+    <div class="span6">
+        <h2>Top Five Categories</h2>
+        {% if categories %}
         <ul>
             {% for category in categories %}
             <li><a href="/rango/category/{{ category.url }}">{{ category.name }}</a></li>
             {% endfor %}
         </ul>
-    {% else %}
-        <strong>There are no categories present.</strong><br>
-    {% endif %}
-    
-    <h2>Top 5 Pages</h2>
-    {% if pages %}
-    <ul>
-        {% for page in pages %}
-        <li><a href="{{ page.url }}">{{ page.title }}</a></li>
-        {% endfor %}
-    </ul>
-    {% else %}
-        <strong>No top pages.</strong><br>
-    {% endif %}
-
+        {% else %}
+        <strong>No categories present.</strong>
+        {% endif %}
+    </div>
+    <!--/span-->
+    <div class="span6">
+        <h2>Top Five Pages</h2>
+        {% if pages %}
+        <ul>
+            {% for page in pages %}
+            <li><a href="{{ page.url}}">{{ page.title }}</a> - {{ page.category }} ({{ page.views }} view(s))</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <strong>No pages present.</strong>
+        {% endif %}
+    </div>
+    <!--/span-->
     <img src="{% static "rango.png" %}" alt="Picture of Rango" />
-    
+</div>
+<!--/row-->
 {% endblock %}
