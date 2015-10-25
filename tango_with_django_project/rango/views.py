@@ -5,6 +5,7 @@ from rango.models import Category, Page
 from rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from datetime import datetime
 
 def decode_url(url):
     return url.replace('_', ' ')
@@ -30,9 +31,26 @@ def index(request):
     # We loop through each category returned, and create a URL attribute.
     # This attribute stores an encoded URL (e.g. spaces replaced with underscores).
     for category in category_list:
-        category.url = category.name.replace(' ', '_')
+        category.url = encode_url(category.name)
+    
+    # session cookies
+    if request.session.get('last_visit'):
+        # The session has a value for the last visit
+        last_visit_time = request.session.get('last_visit')
+        visits = request.session.get('visits', 0)
 
-    # Return a rendered response to send to the client.
+        if (datetime.now() - datetime.strptime(last_visit_time[:-7], "%Y-%m-%d %H:%M:%S")).days > 0:
+            request.session['visits'] = visits + 1
+            request.session['last_visit'] = str(datetime.now())
+    else:
+        # The get returns None, and the session does not have a value for the last visit.
+        request.session['last_visit'] = str(datetime.now())
+        request.session['visits'] = 1
+    
+    # check number of visits (server side)
+    #print request.session.get('visits')
+
+    # Return our Response object
     # We make use of the shortcut function to make our lives easier.
     # Note that the first parameter is the template we wish to use.
     return render_to_response('rango/index.html', context_dict, context)
@@ -43,8 +61,11 @@ def about(request):
     context = RequestContext(request)
 
     # Construct a dictionary to pass to the template engine as its context.
-    # Note the key boldmessage is the same as {{ boldmessage }} in the template!
-    context_dict = {'boldmessage': "about"}
+    # return number of visits from server side cookie
+    if request.session.get('visits'):
+        context_dict = {'num_visits': request.session.get('visits')}
+    else:
+        context_dict = {'num_visits': 0}
 
     # Return a rendered response to send to the client.
     # We make use of the shortcut function to make our lives easier.

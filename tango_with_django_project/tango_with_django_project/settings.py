@@ -17,6 +17,9 @@ DATABASE_PATH = os.path.join(PROJECT_PATH, 'rango.db')
 ## set login page
 LOGIN_URL = '/rango/login/'
 
+## browser length sessions
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
