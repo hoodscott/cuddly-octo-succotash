@@ -14,6 +14,9 @@ STATIC_URL = '/static/'
 ## database path
 DATABASE_PATH = os.path.join(PROJECT_PATH, 'rango.db')
 
+## set login page
+LOGIN_URL = '/rango/login/'
+
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
