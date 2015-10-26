@@ -29,6 +29,7 @@
                        <ul class="nav pull-right">
                            {% if user.is_authenticated %}
                             <li class="navbar-text">Welcome, {{ user.username }}!</li>
+                            <li><a href="/rango/profile/">Profile</a></li>
                             <li><a href="/rango/logout/">Logout</a></li>
                            {% else %}
                             <li><a href="/rango/register/">Register</a></li>
@@ -40,7 +41,7 @@
                             <li><a href="/rango/restricted/">Restricted</a></li>
                             <li><a href="/rango/add_category/">Add Category</a></li>
                            {% endif %}
-                           <li><a href="/rango/search/">Search</a></li>
+                           <!--li><a href="/rango/search/">Search</a></li-->
                            <li><a href="/rango/about/">About</a></li>
                        </ul>
                    </div>
@@ -53,7 +54,14 @@
             <div class="row-fluid">
                 <div class="span3">
                     <div class="well sidebar-nav">
-                        <!--- Empty for the timebeing -->
+                        {% block sidebar %}
+                        {% endblock %}
+                        <div id="cats">
+                        {% if category_list %}
+                            <ul class="nav nav-list"><h4>Category List</h4></ul>
+                            {% include 'rango/category_list.html' with category_list=category_list %}
+                        {% endif %}
+    </div>
                     </div>
                     <!--/.well -->
                 </div>

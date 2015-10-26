@@ -1,7 +1,7 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import RequestContext
-from django.shortcuts import render_to_response
-from rango.models import Category, Page
+from django.shortcuts import render_to_response, redirect
+from rango.models import Category, Page, User, UserProfile
 from rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -50,6 +50,10 @@ def index(request):
     
     # check number of visits (server side)
     #print request.session.get('visits')
+    
+    # add category list for the sidebar
+    category_list = get_category_list()
+    context_dict['category_list'] = category_list
 
     # Return our Response object
     # We make use of the shortcut function to make our lives easier.
@@ -67,6 +71,12 @@ def about(request):
         context_dict = {'num_visits': request.session.get('visits')}
     else:
         context_dict = {'num_visits': 0}
+        
+    # add category list for the sidebar
+    category_list = get_category_list()
+    context_dict['category_list'] = category_list
+    for i in context_dict['category_list']:
+        print i
 
     # Return a rendered response to send to the client.
     # We make use of the shortcut function to make our lives easier.
@@ -95,7 +105,9 @@ def category(request, category_name_url):
 
         # Retrieve all of the associated pages.
         # Note that filter returns >= 1 model instance.
+        #category_list = Category.objects.order_by('-likes')[:5]
         pages = Page.objects.filter(category=category)
+        pages = pages.order_by('-views')
 
         # Adds our results list to the template context under name pages.
         context_dict['pages'] = pages
@@ -106,7 +118,20 @@ def category(request, category_name_url):
         # We get here if we didn't find the specified category.
         # Don't do anything - the template displays the "no category" message for us.
         pass
+        
+    # post request for search
+    if request.method == 'POST':
+        query = request.POST['query'].strip()
 
+        if query:
+            # Run our Bing function to get the results list!
+            result_list = run_query(query)
+            context_dict['result_list'] = result_list
+    
+    # add category list for the sidebar
+    category_list = get_category_list()
+    context_dict['category_list'] = category_list
+    
     # Go render the response and return it to the client.
     return render_to_response('rango/category.html', context_dict, context)
     
@@ -132,14 +157,22 @@ def add_category(request):
     else:
         # If the request was not a POST, display the form to enter details.
         form = CategoryForm()
-
+    
+    # add category list for the sidebar
+    category_list = get_category_list()
+    context_dict = {'category_list': category_list}
+    
     # Bad form (or form details), no form supplied...
     # Render the form with error messages (if any).
-    return render_to_response('rango/add_category.html', {'form': form}, context)
+    return render_to_response('rango/add_category.html', {'form': form, 'category_list': get_category_list()}, context)
     
 
 def add_page(request, category_name_url):
     context = RequestContext(request)
+    
+    # add category list for the sidebar
+    category_list = get_category_list()
+    context_dict = {'category_list': category_list}
 
     category_name = decode_url(category_name_url)
     if request.method == 'POST':
@@ -158,7 +191,7 @@ def add_page(request, category_name_url):
             except Category.DoesNotExist:
                 # If we get here, the category does not exist.
                 # Go back and render the add category form as a way of saying the category does not exist.
-                return render_to_response('rango/add_category.html', {}, context)
+                return render_to_response('rango/add_category.html', context_dict, context)
 
             # Also, create a default value for the number of views.
             page.views = 0
@@ -173,10 +206,12 @@ def add_page(request, category_name_url):
     else:
         form = PageForm()
 
-    return render_to_response( 'rango/add_page.html',
-            {'category_name_url': category_name_url,
-             'category_name': category_name, 'form': form},
-             context)
+    # add results to dict
+    context_dict['category_name_url'] = category_name_url
+    context_dict['category_name'] = category_name
+    context_dict['form'] = form
+              
+    return render_to_response( 'rango/add_page.html', context_dict, context)
              
 def register(request):
     # Like before, get the request's context.
@@ -231,11 +266,14 @@ def register(request):
     else:
         user_form = UserForm()
         profile_form = UserProfileForm()
+        
+    # add category list for the sidebar
+    category_list = get_category_list()
 
     # Render the template depending on the context.
     return render_to_response(
             'rango/register.html',
-            {'user_form': user_form, 'profile_form': profile_form, 'registered': registered},
+            {'user_form': user_form, 'profile_form': profile_form, 'registered': registered, 'category_list': category_list},
             context)
             
 def user_login(request):
@@ -274,9 +312,8 @@ def user_login(request):
     # The request is not a HTTP POST, so display the login form.
     # This scenario would most likely be a HTTP GET.
     else:
-        # No context variables to pass to the template system, hence the
-        # blank dictionary object...
-        return render_to_response('rango/login.html', {}, context)
+        category_list = get_category_list()
+        return render_to_response('rango/login.html', {'category_list': category_list}, context)
         
 @login_required
 def restricted(request):
@@ -285,6 +322,8 @@ def restricted(request):
     # Construct a dictionary to pass to the template engine as its context.
     # Note the key boldmessage is the same as {{ boldmessage }} in the template!
     context_dict = {'boldmessage': "Since you're logged in, you can see this text!"}
+    category_list = get_category_list()
+    context_dict['category_list'] = category_list
 
     # Return a rendered response to send to the client.
     # We make use of the shortcut function to make our lives easier.
@@ -299,15 +338,48 @@ def user_logout(request):
     # Take the user back to the homepage.
     return HttpResponseRedirect('/rango/')
 
-def search(request):
+@login_required
+def profile(request):
     context = RequestContext(request)
-    result_list = []
+    
+    # get category list for sidebar
+    category_list = get_category_list()
+    context_dict = {'category_list': category_list}
+    
+    
+    user = User.objects.get(username=request.user)
 
-    if request.method == 'POST':
-        query = request.POST['query'].strip()
+    try:
+        user_profile = UserProfile.objects.get(user=u)
+    except:
+        user_profile = None
 
-        if query:
-            # Run our Bing function to get the results list!
-            result_list = run_query(query)
+    context_dict['user'] = user
+    context_dict['userprofile'] = user_profile
+    return render_to_response('rango/profile.html', context_dict, context)
+    
+def track_url(request):
+    context = RequestContext(request)
+    page_id = None
+    url = '/rango/'
+    if request.method == 'GET':
+        if 'page_id' in request.GET:
+            page_id = request.GET['page_id']
+            try:
+                page = Page.objects.get(id=page_id)
+                page.views = page.views + 1
+                page.save()
+                url = page.url
+            except:
+                pass
 
-    return render_to_response('rango/search.html', {'result_list': result_list}, context)
+    return redirect(url)
+
+def get_category_list():
+    category_list = Category.objects.all()
+
+    for category in category_list:
+        print category.name, 4
+        category.url = encode_url(category.name)
+
+    return category_list
